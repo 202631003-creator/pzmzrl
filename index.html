@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>말병이의 먹방 모험 - 말 먹이주기 게임</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Pretendard', 'Malgun Gothic', sans-serif;
+            background-color: #1a2634;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .header {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.2rem;
+            color: #f6d365;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 1rem;
+            color: #fda085;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 70%, #90EE90 70%, #66BB6A 100%);
+            border: 4px solid #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        /* 구름 배경 데코레이션 */
+        .cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 50px;
+            opacity: 0.9;
+        }
+
+        /* 게임 상태 표시 줄 */
+        .scoreboard {
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .score-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 캐릭터 (말병) */
+        #horse {
+            position: absolute;
+            bottom: 30px;
+            left: 360px;
+            width: 80px;
+            height: 80px;
+            font-size: 65px;
+            line-height: 80px;
+            text-align: center;
+            transition: transform 0.05s ease-out;
+            z-index: 5;
+            filter: drop-shadow(0 5px 3px rgba(0,0,0,0.3));
+        }
+
+        .horse-name {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ff6b6b;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+
+        /* 떨어지는 음식 요소 */
+        .food-item {
+            position: absolute;
+            width: 45px;
+            height: 45px;
+            font-size: 38px;
+            line-height: 45px;
+            text-align: center;
+            z-index: 4;
+            filter: drop-shadow(0 3px 2px rgba(0,0,0,0.2));
+        }
+
+        /* 오버레이 팝업 화면 */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            border-radius: 8px;
+        }
+
+        .overlay h2 {
+            font-size: 2.5rem;
+            color: #f6d365;
+            margin-bottom: 15px;
+        }
+
+        .overlay p {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            text-align: center;
+            line-height: 1.6;
+            color: #ddd;
+        }
+
+        .btn {
+            padding: 12px 32px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #fff;
+            background: linear-gradient(45deg, #ff7e5f, #feb47b);
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 126, 95, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 6px 20px rgba(255, 126, 95, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        /* 점수 획득/감소 팝업 효과 */
+        .score-popup {
+            position: absolute;
+            font-weight: bold;
+            font-size: 20px;
+            animation: floatUp 0.8s ease-out forwards;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-40px); }
+        }
+
+        /* 하단 조작 안내 bar */
+        .controls-info {
+            margin-top: 15px;
+            display: flex;
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+        }
+
+        .key {
+            background: #fff;
+            color: #333;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🐴 말병이의 먹방 모험 🥕</h1>
+        <p>하늘에서 떨어지는 맛있는 음식을 먹고 말병이를 행복하게 해주세요!</p>
+    </div>
+
+    <div id="game-container">
+        <!-- 배경 구름 -->
+        <div class="cloud" style="width: 100px; height: 30px; top: 40px; left: 50px;"></div>
+        <div class="cloud" style="width: 120px; height: 40px; top: 80px; left: 550px;"></div>
+        <div class="cloud" style="width: 80px; height: 25px; top: 120px; left: 300px;"></div>
+
+        <!-- 점수 및 체력 UI -->
+        <div class="scoreboard">
+            <div class="score-item">
+                <span>🏆 점수:</span>
+                <span id="score">0</span>
+            </div>
+            <div class="score-item">
+                <span>❤️ 체력:</span>
+                <span id="lives">❤️❤️❤️</span>
+            </div>
+        </div>
+
+        <!-- 플레이어 (말병) -->
+        <div id="horse">
+            <div class="horse-name">말병</div>
+            🐴
+        </div>
+
+        <!-- 게임 시작 화면 -->
+        <div id="start-screen" class="overlay">
+            <h2>말병이 먹이주기 게임</h2>
+            <p>
+                <b>[조작 방법]</b><br>
+                키보드 ◀ ▶ (좌우 화살표) 또는 마우스 이동으로 <b>말병</b>이를 움직이세요.<br><br>
+                🥕 🍎 🍌 🌾 맛있는 음식을 먹으면 <b>점수 UP!</b><br>
+                💣 폭탄이나 👟 신발을 받으면 <b>체력 Down!</b>
+            </p>
+            <button class="btn" onclick="startGame()">게임 시작하기</button>
+        </div>
+
+        <!-- 게임 오버 화면 -->
+        <div id="game-over-screen" class="overlay" style="display: none;">
+            <h2>GAME OVER</h2>
+            <p id="final-score-text">최종 점수: 0점</p>
+            <button class="btn" onclick="startGame()">다시 도전하기</button>
+        </div>
+    </div>
+
+    <div class="controls-info">
+        <span>이동: <span class="key">◀</span> <span class="key">▶</span> 또는 마우스 커서</span>
+        <span>당근/사과: +10점</span>
+        <span>바나나/밀: +20점</span>
+        <span>폭탄/신발: -1 하트</span>
+    </div>
+
+    <script>
+        const container = document.getElementById('game-container');
+        const horse = document.getElementById('horse');
+        const scoreEl = document.getElementById('score');
+        const livesEl = document.getElementById('lives');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalScoreText = document.getElementById('final-score-text');
+
+        const CONTAINER_WIDTH = 800;
+        const HORSE_WIDTH = 80;
+        
+        let score = 0;
+        let lives = 3;
+        let horseX = 360;
+        let gameActive = false;
+        let gameLoopId = null;
+        let itemSpawnInterval = null;
+        let items = [];
+        
+        let keys = { ArrowLeft: false, ArrowRight: false };
+
+        const FOOD_TYPES = [
+            { symbol: '🥕', score: 10, type: 'good' },
+            { symbol: '🍎', score: 10, type: 'good' },
+            { symbol: '🍌', score: 20, type: 'good' },
+            { symbol: '🌾', score: 20, type: 'good' },
+            { symbol: '💣', score: 0, type: 'bad' },
+            { symbol: '👟', score: 0, type: 'bad' }
+        ];
+
+        // 키보드 입력 처리
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                keys[e.key] = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                keys[e.key] = false;
+            }
+        });
+
+        // 마우스 이동 처리
+        container.addEventListener('mousemove', (e) => {
+            if (!gameActive) return;
+            const rect = container.getBoundingClientRect();
+            let mouseX = e.clientX - rect.left - (HORSE_WIDTH / 2);
+            
+            if (mouseX < 0) mouseX = 0;
+            if (mouseX > CONTAINER_WIDTH - HORSE_WIDTH) mouseX = CONTAINER_WIDTH - HORSE_WIDTH;
+            
+            if (mouseX > horseX) {
+                horse.style.transform = 'scaleX(-1)';
+            } else if (mouseX < horseX) {
+                horse.style.transform = 'scaleX(1)';
+            }
+            
+            horseX = mouseX;
+            horse.style.left = horseX + 'px';
+        });
+
+        function startGame() {
+            score = 0;
+            lives = 3;
+            horseX = 360;
+            gameActive = true;
+            
+            items.forEach(item => item.element.remove());
+            items = [];
+
+            scoreEl.textContent = score;
+            updateLivesUI();
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            horse.style.left = horseX + 'px';
+
+            if (gameLoopId) cancelAnimationFrame(gameLoopId);
+            if (itemSpawnInterval) clearInterval(itemSpawnInterval);
+
+            itemSpawnInterval = setInterval(spawnItem, 700);
+            gameLoopId = requestAnimationFrame(updateGame);
+        }
+
+        function updateLivesUI() {
+            livesEl.textContent = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+        }
+
+        function spawnItem() {
+            if (!gameActive) return;
+
+            const isGood = Math.random() < 0.75;
+            let pool = isGood 
+                ? FOOD_TYPES.filter(f => f.type === 'good') 
+                : FOOD_TYPES.filter(f => f.type === 'bad');
+            
+            const selected = pool[Math.floor(Math.random() * pool.length)];
+
+            const itemEl = document.createElement('div');
+            itemEl.className = 'food-item';
+            itemEl.textContent = selected.symbol;
+            
+            const xPos = Math.random() * (CONTAINER_WIDTH - 50);
+            itemEl.style.left = xPos + 'px';
+            itemEl.style.top = '-50px';
+            
+            container.appendChild(itemEl);
+
+            items.push({
+                element: itemEl,
+                x: xPos,
+                y: -50,
+                speed: 3 + Math.random() * 3 + (score / 100),
+                data: selected
+            });
+        }
+
+        function updateGame() {
+            if (!gameActive) return;
+
+            if (keys.ArrowLeft) {
+                horseX -= 7;
+                horse.style.transform = 'scaleX(1)';
+            }
+            if (keys.ArrowRight) {
+                horseX += 7;
+                horse.style.transform = 'scaleX(-1)';
+            }
+
+            if (horseX < 0) horseX = 0;
+            if (horseX > CONTAINER_WIDTH - HORSE_WIDTH) horseX = CONTAINER_WIDTH - HORSE_WIDTH;
+            horse.style.left = horseX + 'px';
+
+            const horseBox = {
+                left: horseX + 10,
+                right: horseX + HORSE_WIDTH - 10,
+                top: 500 - 30 - 80 + 20,
+                bottom: 500 - 30
+            };
+
+            for (let i = items.length - 1; i >= 0; i--) {
+                const item = items[i];
+                item.y += item.speed;
+                item.element.style.top = item.y + 'px';
+
+                const itemBox = {
+                    left: item.x,
+                    right: item.x + 45,
+                    top: item.y,
+                    bottom: item.y + 45
+                };
+
+                const isColliding = !(
+                    itemBox.right < horseBox.left ||
+                    itemBox.left > horseBox.right ||
+                    itemBox.bottom < horseBox.top ||
+                    itemBox.top > horseBox.bottom
+                );
+
+                if (isColliding) {
+                    if (item.data.type === 'good') {
+                        score += item.data.score;
+                        scoreEl.textContent = score;
+                        showScorePopup(`+${item.data.score}`, item.x, item.y, '#4CAF50');
+                    } else {
+                        lives -= 1;
+                        updateLivesUI();
+                        showScorePopup(`-1 ❤️`, item.x, item.y, '#F44336');
+                        
+                        container.style.transform = 'translate(5px, 5px)';
+                        setTimeout(() => container.style.transform = 'translate(0, 0)', 100);
+
+                        if (lives <= 0) {
+                            endGame();
+                        }
+                    }
+
+                    item.element.remove();
+                    items.splice(i, 1);
+                    continue;
+                }
+
+                if (item.y > 500) {
+                    item.element.remove();
+                    items.splice(i, 1);
+                }
+            }
+
+            if (gameActive) {
+                gameLoopId = requestAnimationFrame(updateGame);
+            }
+        }
+
+        function showScorePopup(text, x, y, color) {
+            const popup = document.createElement('div');
+            popup.className = 'score-popup';
+            popup.textContent = text;
+            popup.style.left = x + 'px';
+            popup.style.top = y + 'px';
+            popup.style.color = color;
+            container.appendChild(popup);
+
+            setTimeout(() => {
+                popup.remove();
+            }, 800);
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(itemSpawnInterval);
+            cancelAnimationFrame(gameLoopId);
+            
+            finalScoreText.textContent = `말병이가 먹은 맛있는 음식 점수: ${score}점!`;
+            gameOverScreen.style.display = 'flex';
+        }
+    </script>
+</body>
+</html>
